@@ -2,11 +2,11 @@ server:
   port: 8081
 spring:
   application:
-    name: hmdp
+    name: shifu
   datasource:
     # MySQL 8 驱动类（原 com.mysql.jdbc.Driver 已废弃）
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/hmdp?useSSL=false&serverTimezone=UTC&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3306/shifu?useSSL=false&serverTimezone=UTC&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
     password: 1234
   # Spring Boot 3 起 Redis 配置前缀由 spring.redis 改为 spring.data.redis
@@ -24,19 +24,19 @@ spring:
   jackson:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
 mybatis-plus:
-  type-aliases-package: com.hmdp.entity # 别名扫描包
+  type-aliases-package: com.shifu.entity # 别名扫描包
 logging:
   level:
-    com.hmdp: debug
+    com.shifu: debug
   pattern:
     dateformat: mm:ss.SSS
 
 # RocketMQ：秒杀订单消息队列
-hmdp:
+shifu:
   rocketmq:
     # RocketMQ 部署在 Windows 本机（D:\rocketmq）
     # 若以后换成虚拟机/服务器部署，改成对应 IP 即可，例如 192.168.100.130:9876
     name-server: 127.0.0.1:9876
-    producer-group: seckill-order-producer
-    consumer-group: seckill-order-consumer
-    topic: seckill-order-topic
+    producer-group: benefit-order-producer
+    consumer-group: benefit-order-consumer
+    topic: benefit-order-topic
