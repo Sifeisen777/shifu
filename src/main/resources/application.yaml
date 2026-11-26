@@ -40,3 +40,8 @@ shifu:
     producer-group: benefit-order-producer
     consumer-group: benefit-order-consumer
     topic: benefit-order-topic
+    # 笔记发布事件：粉丝收件箱异步推送
+    feed:
+      producer-group: note-feed-producer
+      consumer-group: note-feed-consumer
+      topic: note-feed-topic

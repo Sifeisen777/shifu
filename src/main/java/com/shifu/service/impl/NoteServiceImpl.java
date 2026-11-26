@@ -8,14 +8,15 @@ import com.shifu.dto.Result;
 import com.shifu.dto.ScrollResult;
 import com.shifu.dto.UserDTO;
 import com.shifu.entity.Note;
-import com.shifu.entity.Follow;
 import com.shifu.entity.User;
 import com.shifu.mapper.NoteMapper;
+import com.shifu.mq.NoteFeedProducer;
+import com.shifu.service.IFeedService;
 import com.shifu.service.INoteService;
-import com.shifu.service.IFollowService;
 import com.shifu.service.IUserService;
 import com.shifu.utils.SystemConstants;
 import com.shifu.utils.UserHolder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ import static com.shifu.utils.RedisConstants.FEED_KEY;
  * @author 李勇
  * @since 2021-12-22
  */
+@Slf4j
 @Service
 public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements INoteService {
 
@@ -48,7 +50,10 @@ public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements IN
     private StringRedisTemplate stringRedisTemplate;
 
     @Resource
-    private IFollowService followService;
+    private IFeedService feedService;
+
+    @Resource
+    private NoteFeedProducer noteFeedProducer;
 
     @Override
     public Result queryHotNote(Integer current) {
@@ -149,20 +154,20 @@ public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements IN
         note.setUserId(user.getId());
         // 2.保存生活笔记
         boolean isSuccess = save(note);
-        if(!isSuccess){
+        if (!isSuccess) {
             return Result.fail("新增笔记失败!");
         }
-        // 3.查询笔记作者的所有粉丝 select * from biz_follow where follow_user_id = ?
-        List<Follow> follows = followService.query().eq("follow_user_id", user.getId()).list();
-        // 4.推送笔记id给所有粉丝
-        for (Follow follow : follows) {
-            // 4.1.获取粉丝id
-            Long userId = follow.getUserId();
-            // 4.2.推送
-            String key = FEED_KEY + userId;
-            stringRedisTemplate.opsForZSet().add(key, note.getId().toString(), System.currentTimeMillis());
+
+        // 3.投递发布事件，由消费者异步推送到粉丝收件箱。
+        //   同步 for 循环在这里会随粉丝数线性变慢（一万粉丝＝一万次 Redis 写），
+        //   接口会直接超时，因此改为「请求线程只投递，消费线程做扇出」。
+        long publishTime = System.currentTimeMillis();
+        boolean sent = noteFeedProducer.send(note.getId(), user.getId(), publishTime);
+        if (!sent) {
+            // MQ 不可用时降级为同步推送，保证关注流功能不失效
+            log.warn("笔记发布事件投递失败，降级为同步推送，noteId={}", note.getId());
+            feedService.pushNoteToFollowers(note.getId(), user.getId(), publishTime);
         }
-        // 5.返回id
         return Result.ok(note.getId());
     }
 
