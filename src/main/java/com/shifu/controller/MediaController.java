@@ -3,8 +3,8 @@ package com.shifu.controller;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.shifu.dto.Result;
-import com.shifu.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +17,13 @@ import java.util.UUID;
 @RequestMapping("/media")
 public class MediaController {
 
+    /**
+     * 图片上传根目录，指向 nginx 静态资源目录。
+     * 原来写死在 SystemConstants 里，换个部署路径就得改代码，已改为配置项。
+     */
+    @Value("${shifu.upload.dir}")
+    private String uploadDir;
+
     @PostMapping("note")
     public Result uploadImage(@RequestParam("file") MultipartFile image) {
         try {
@@ -25,7 +32,7 @@ public class MediaController {
             // 生成新文件名
             String fileName = createNewFileName(originalFilename);
             // 保存文件
-            image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
+            image.transferTo(new File(uploadDir, fileName));
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
             return Result.ok(fileName);
@@ -36,7 +43,7 @@ public class MediaController {
 
     @GetMapping("/note/delete")
     public Result deleteNoteImg(@RequestParam("name") String filename) {
-        File file = new File(SystemConstants.IMAGE_UPLOAD_DIR, filename);
+        File file = new File(uploadDir, filename);
         if (file.isDirectory()) {
             return Result.fail("错误的文件名称");
         }
@@ -53,7 +60,7 @@ public class MediaController {
         int d1 = hash & 0xF;
         int d2 = (hash >> 4) & 0xF;
         // 判断目录是否存在
-        File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/notes/{}/{}", d1, d2));
+        File dir = new File(uploadDir, StrUtil.format("/notes/{}/{}", d1, d2));
         if (!dir.exists()) {
             dir.mkdirs();
         }

@@ -33,6 +33,10 @@ logging:
 
 # RocketMQ：秒杀订单消息队列
 shifu:
+  # 图片上传目录：指向 nginx 的静态资源目录，前端通过 /imgs/ 访问
+  # 换机器/换目录只改这里，不用动代码
+  upload:
+    dir: "D:/java/Java demo/ShiFu/nginx-1.18.0/html/shifu/imgs/"
   rocketmq:
     # RocketMQ 部署在 Windows 本机（D:\rocketmq）
     # 若以后换成虚拟机/服务器部署，改成对应 IP 即可，例如 192.168.100.130:9876
