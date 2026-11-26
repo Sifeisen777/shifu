@@ -1,0 +1,61 @@
+/* ============================================================
+   食赴 ShiFu · 设计令牌
+   风格定位：暖纸质底 + 陶土红主色 + 杂志式排版
+   目的：与常见「橙白配色 + 组件库默认样式」的模板感拉开距离
+   ============================================================ */
+:root {
+  /* 主色：陶土红，取自炭火与陶器，比纯橙更沉稳 */
+  --brand: #ce4a26;
+  --brand-strong: #ab381a;
+  --brand-soft: #fbece6;
+  --brand-line: #f2d3c7;
+
+  /* 辅助色：评分/会员用暖金 */
+  --gold: #b08a4f;
+  --gold-soft: #faf3e6;
+
+  /* 语义色 */
+  --success: #2f7d4f;
+  --danger: #c0392b;
+
+  /* 文字层级 */
+  --ink: #171310;
+  --ink-2: #5a5148;
+  --ink-3: #9a9086;
+  --ink-inverse: #fffdfa;
+
+  /* 背景与分隔 */
+  --bg: #f5f0e8;
+  --surface: #ffffff;
+  --surface-2: #faf7f2;
+  --line: #ebe3d7;
+  --line-strong: #ded4c6;
+
+  /* 圆角 */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* 阴影：暖色投影，避免灰调发脏 */
+  --shadow-1: 0 1px 3px rgba(60, 40, 25, 0.05);
+  --shadow-2: 0 4px 16px rgba(60, 40, 25, 0.08);
+  --shadow-3: 0 12px 36px rgba(60, 40, 25, 0.14);
+
+  /* 版式 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC',
+    'Microsoft YaHei', 'Segoe UI', sans-serif;
+  --font-num: 'DIN Alternate', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+
+  /* 布局 */
+  --shell-w: 480px;
+  --tabbar-h: 58px;
+  --navbar-h: 52px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+
+  /* 动效 */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur: 0.22s;
+}

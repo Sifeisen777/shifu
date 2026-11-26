@@ -1,0 +1,280 @@
+/* ============================================================
+   全局基础样式：重置、排版、通用原子类
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  background: var(--surface-2);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  outline: none;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-3);
+}
+
+/* 去掉 type=search 的原生清除按钮，统一用自定义图标 */
+input[type='search']::-webkit-search-decoration,
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-results-button,
+input[type='search']::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+/* 隐藏滚动条但保留滚动能力 */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- 应用外壳：移动优先，桌面居中成「设备列」 ---------- */
+.shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--shell-w);
+  min-height: 100%;
+  margin: 0 auto;
+  background: var(--bg);
+  isolation: isolate;
+}
+
+@media (min-width: 520px) {
+  body {
+    background:
+      radial-gradient(circle at 12% 8%, #fff8ef 0%, transparent 42%),
+      radial-gradient(circle at 88% 92%, #f3e6d8 0%, transparent 46%),
+      #eae2d6;
+  }
+  .shell {
+    box-shadow: 0 0 0 1px rgba(60, 40, 25, 0.06), 0 24px 70px rgba(60, 40, 25, 0.16);
+    min-height: 100vh;
+  }
+}
+
+/* ---------- 页面通用留白：给底部导航让位 ---------- */
+.page {
+  min-height: 100%;
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
+}
+
+.page--plain {
+  padding-bottom: calc(24px + var(--safe-b));
+}
+
+/* ---------- 通用卡片 ---------- */
+.card {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: var(--r-pill);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
+}
+.btn:active {
+  transform: scale(0.975);
+}
+.btn--primary {
+  background: var(--brand);
+  color: var(--ink-inverse);
+  box-shadow: 0 6px 18px rgba(206, 74, 38, 0.28);
+}
+.btn--primary:disabled {
+  background: var(--line-strong);
+  color: var(--ink-3);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn--ghost {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.btn--soft {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.btn--block {
+  width: 100%;
+}
+
+/* ---------- 分区标题 ---------- */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 22px 18px 12px;
+}
+.section-title {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+.section-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- 骨架屏 ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #efe8dd;
+  border-radius: var(--r-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------- 文字截断 ---------- */
+.clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- 路由过渡 ---------- */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s var(--ease);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.pop-enter-active {
+  transition: opacity 0.2s var(--ease), transform 0.24s var(--ease);
+}
+.pop-leave-active {
+  transition: opacity 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.pop-enter-from {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.pop-leave-to {
+  opacity: 0;
+}
+
+/* ---------- 点击反馈 ---------- */
+.tap {
+  transition: transform 0.16s var(--ease), opacity 0.16s var(--ease);
+}
+.tap:active {
+  transform: scale(0.985);
+  opacity: 0.92;
+}
