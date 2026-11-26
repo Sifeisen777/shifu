@@ -4,12 +4,16 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shifu.dto.LoginFormDTO;
+import com.shifu.dto.ProfileFormDTO;
 import com.shifu.dto.Result;
 import com.shifu.dto.UserDTO;
 import com.shifu.entity.User;
+import com.shifu.entity.UserProfile;
 import com.shifu.mapper.UserMapper;
+import com.shifu.service.IUserProfileService;
 import com.shifu.service.IUserService;
 import com.shifu.utils.RegexUtils;
 import com.shifu.utils.UserHolder;
@@ -44,6 +48,67 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private IUserProfileService userProfileService;
+
+    @Override
+    public Result logout(String token) {
+        // 删除 Redis 中的登录令牌，使当前 token 立即失效（而不是仅在前端清除）
+        if (StrUtil.isNotBlank(token)) {
+            stringRedisTemplate.delete(LOGIN_USER_KEY + token);
+        }
+        UserHolder.removeUser();
+        return Result.ok();
+    }
+
+    @Override
+    public Result updateProfile(ProfileFormDTO form, String token) {
+        UserDTO current = UserHolder.getUser();
+        if (current == null) {
+            return Result.fail("请先登录");
+        }
+        Long userId = current.getId();
+
+        // 1.昵称与头像存在 sys_user
+        String nickName = StrUtil.blankToDefault(form.getNickName(), current.getNickName());
+        User user = new User();
+        user.setId(userId);
+        user.setNickName(nickName);
+        if (StrUtil.isNotBlank(form.getIcon())) {
+            user.setIcon(form.getIcon());
+        }
+        updateById(user);
+
+        // 2.其余资料存在 sys_user_profile，不存在则新建（主键即用户id）
+        UserProfile profile = userProfileService.getById(userId);
+        if (profile == null) {
+            profile = new UserProfile();
+            profile.setUserId(userId);
+        }
+        profile.setIntroduce(form.getIntroduce());
+        profile.setCity(form.getCity());
+        profile.setGender(form.getGender());
+        profile.setBirthday(form.getBirthday());
+        userProfileService.saveOrUpdate(profile);
+
+        // 3.同步 Redis 中的登录用户缓存，否则本次会话取到的仍是旧昵称
+        current.setNickName(nickName);
+        if (StrUtil.isNotBlank(form.getIcon())) {
+            current.setIcon(form.getIcon());
+        }
+        UserHolder.saveUser(current);
+        if (StrUtil.isNotBlank(token)) {
+            String tokenKey = LOGIN_USER_KEY + token;
+            Map<String, Object> patch = new HashMap<>(2);
+            patch.put("nickName", nickName);
+            if (StrUtil.isNotBlank(form.getIcon())) {
+                patch.put("icon", form.getIcon());
+            }
+            stringRedisTemplate.opsForHash().putAll(tokenKey, patch);
+        }
+        return Result.ok();
+    }
 
     @Override
     public Result sendCode(String phone, HttpSession session) {

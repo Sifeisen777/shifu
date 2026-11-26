@@ -3,6 +3,7 @@ package com.shifu.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.shifu.dto.LoginFormDTO;
+import com.shifu.dto.ProfileFormDTO;
 import com.shifu.dto.Result;
 import com.shifu.dto.UserDTO;
 import com.shifu.entity.User;
@@ -54,13 +55,23 @@ public class UserController {
     }
 
     /**
-     * 登出功能
+     * 登出功能：删除服务端令牌，token 立即失效
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(){
-        // TODO 实现登出功能
-        return Result.fail("功能未完成");
+    public Result logout(@RequestHeader(value = "authorization", required = false) String token) {
+        return userService.logout(token);
+    }
+
+    /**
+     * 更新个人资料
+     * @param form 资料表单
+     */
+    @PutMapping("/info")
+    public Result updateProfile(
+            @RequestBody ProfileFormDTO form,
+            @RequestHeader(value = "authorization", required = false) String token) {
+        return userService.updateProfile(form, token);
     }
 
     @GetMapping("/me")

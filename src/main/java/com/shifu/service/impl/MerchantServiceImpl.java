@@ -82,11 +82,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantMapper, Merchant> i
         // 1.判断是否需要根据坐标查询
         if (x == null || y == null) {
             // 不需要坐标查询，按数据库查询
-            Page<Merchant> page = query()
-                    .eq("type_id", typeId)
-                    .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
-            // 返回数据
-            return Result.ok(page.getRecords());
+            return queryByDb(typeId, current);
         }
 
         // 2.计算分页参数
@@ -102,11 +98,13 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantMapper, Merchant> i
                         new Distance(5000),
                         RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().includeDistance().limit(end)
                 );
-        // 4.解析出id
-        if (results == null) {
-            return Result.ok(Collections.emptyList());
+        List<GeoResult<RedisGeoCommands.GeoLocation<String>>> list =
+                results == null ? Collections.emptyList() : results.getContent();
+
+        // 4.附近没有命中（索引未初始化或超出半径）时回退数据库查询，避免列表空白
+        if (list.isEmpty()) {
+            return current == 1 ? queryByDb(typeId, current) : Result.ok(Collections.emptyList());
         }
-        List<GeoResult<RedisGeoCommands.GeoLocation<String>>> list = results.getContent();
         if (list.size() <= from) {
             // 没有下一页了，结束
             return Result.ok(Collections.emptyList());
@@ -130,5 +128,15 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantMapper, Merchant> i
         }
         // 6.返回
         return Result.ok(merchants);
+    }
+
+    /**
+     * 按类型分页查询（不涉及距离）。坐标查询无结果时作为兜底。
+     */
+    private Result queryByDb(Integer typeId, Integer current) {
+        Page<Merchant> page = query()
+                .eq("type_id", typeId)
+                .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
+        return Result.ok(page.getRecords());
     }
 }

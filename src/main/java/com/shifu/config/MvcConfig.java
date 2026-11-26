@@ -24,7 +24,8 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/benefit/**",
                         "/merchant-category/**",
                         "/media/**",
-                        "/note/hot",
+                        // 单段路径：/note/hot 与 /note/{id}，笔记详情允许游客浏览
+                        "/note/*",
                         "/user/code",
                         "/user/login"
                 ).order(1);

@@ -30,7 +30,10 @@ public class UserProfile implements Serializable {
     /**
      * 主键，用户id
      */
-    @TableId(value = "user_id", type = IdType.AUTO)
+    /**
+     * 主键即用户id，与 sys_user 一一对应，由业务侧显式指定
+     */
+    @TableId(value = "user_id", type = IdType.INPUT)
     private Long userId;
 
     /**
