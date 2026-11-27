@@ -45,8 +45,8 @@ frontend/
 | `/merchant/:id` | 商户详情：图集、权益卡、秒杀 | `GET /merchant/{id}`、`GET /benefit/list/{id}` |
 | `/note/:id` | 笔记详情：图集、点赞、关注 | `GET /note/{id}`、`PUT /note/like/{id}` |
 | `/note/new` | 发布笔记：多图上传、关联商户 | `POST /media/note`、`POST /note` |
-| `/login` | 手机验证码登录 | `POST /user/code`、`POST /user/login` |
-| `/me` | 个人主页：笔记、关注流、签到 | `GET /user/me`、`GET /note/of/follow` |
+| `/login` | 登录（验证码 / 密码切换） | `POST /user/code`、`POST /user/login` |
+| `/me` | 个人主页：笔记、关注流、签到、密码设置 | `GET /user/me`、`GET /note/of/follow`、`PUT /user/password` |
 | `/me/edit` | 资料编辑 | `GET /user/info/{id}`、`PUT /user/info` |
 | `/user/:id` | 他人主页：关注与共同关注 | `GET /user/{id}`、`GET /follow/common/{id}` |
 

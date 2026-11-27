@@ -1,14 +1,14 @@
 package com.shifu.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shifu.entity.UserProfile;
 import com.shifu.mapper.UserProfileMapper;
 import com.shifu.service.IUserProfileService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author 李勇
@@ -17,4 +17,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile> implements IUserProfileService {
 
+    @Override
+    public void recountFollowStats(Long userId) {
+        baseMapper.recountFollowStats(userId);
+    }
 }

@@ -2,6 +2,7 @@ package com.shifu.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shifu.dto.LoginFormDTO;
+import com.shifu.dto.PasswordFormDTO;
 import com.shifu.dto.ProfileFormDTO;
 import com.shifu.dto.Result;
 import com.shifu.entity.User;
@@ -38,5 +39,11 @@ public interface IUserService extends IService<User> {
      * @param token 当前登录令牌，用于同步 Redis 中的用户缓存
      */
     Result updateProfile(ProfileFormDTO form, String token);
+
+    /**
+     * 设置或修改登录密码。首次设置无需原密码；已设置时必须校验原密码。
+     * @param form 密码表单
+     */
+    Result setPassword(PasswordFormDTO form);
 
 }

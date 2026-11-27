@@ -10,8 +10,10 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
+const mode = ref('code')
 const phone = ref('')
 const code = ref('')
+const password = ref('')
 const agreed = ref(true)
 const countdown = ref(0)
 const sending = ref(false)
@@ -51,12 +53,20 @@ async function onSendCode() {
 async function onSubmit() {
   if (submitting.value) return
   if (!validPhone(phone.value)) return toast.error('请输入正确的手机号')
-  if (!code.value.trim()) return toast.error('请输入验证码')
   if (!agreed.value) return toast.error('请先阅读并同意用户协议')
+
+  const payload = { phone: phone.value }
+  if (mode.value === 'code') {
+    if (!code.value.trim()) return toast.error('请输入验证码')
+    payload.code = code.value.trim()
+  } else {
+    if (!password.value) return toast.error('请输入密码')
+    payload.password = password.value
+  }
 
   submitting.value = true
   try {
-    const { data: token } = await login({ phone: phone.value, code: code.value.trim() })
+    const { data: token } = await login(payload)
     auth.setToken(token)
     await auth.refreshUser()
     toast.success('登录成功')
@@ -85,8 +95,27 @@ onBeforeUnmount(() => {
     </header>
 
     <section class="card">
-      <h1 class="card__title">手机号登录</h1>
-      <p class="card__sub">未注册的手机号验证后将自动创建账号</p>
+      <h1 class="card__title">{{ mode === 'code' ? '手机号登录' : '密码登录' }}</h1>
+      <p class="card__sub">
+        {{ mode === 'code' ? '未注册的手机号验证后将自动创建账号' : '使用已设置的账号密码登录' }}
+      </p>
+
+      <div class="switch">
+        <button
+          class="switch__item"
+          :class="{ 'switch__item--on': mode === 'code' }"
+          @click="mode = 'code'"
+        >
+          验证码登录
+        </button>
+        <button
+          class="switch__item"
+          :class="{ 'switch__item--on': mode === 'password' }"
+          @click="mode = 'password'"
+        >
+          密码登录
+        </button>
+      </div>
 
       <label class="field">
         <span class="field__prefix">+86</span>
@@ -99,7 +128,7 @@ onBeforeUnmount(() => {
         />
       </label>
 
-      <label class="field">
+      <label v-if="mode === 'code'" class="field">
         <input
           v-model="code"
           type="text"
@@ -116,6 +145,16 @@ onBeforeUnmount(() => {
         </button>
       </label>
 
+      <label v-else class="field">
+        <input
+          v-model="password"
+          type="password"
+          autocomplete="current-password"
+          maxlength="32"
+          placeholder="请输入密码"
+        />
+      </label>
+
       <button class="btn btn--primary btn--block submit" :disabled="submitting" @click="onSubmit">
         {{ submitting ? '登录中…' : '登录' }}
       </button>
@@ -130,7 +169,11 @@ onBeforeUnmount(() => {
     </section>
 
     <p class="dev-hint">
-      开发环境未接短信网关，验证码会打印在后端控制台日志中
+      {{
+        mode === 'code'
+          ? '开发环境未接短信网关，验证码会打印在后端控制台日志中'
+          : '还没有密码？先用验证码登录，再到「我的」页面设置'
+      }}
     </p>
   </div>
 </template>
@@ -188,9 +231,32 @@ onBeforeUnmount(() => {
 }
 .card__sub {
   margin-top: 5px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   font-size: 12px;
   color: var(--ink-3);
+}
+
+.switch {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.switch__item {
+  flex: 1;
+  height: 32px;
+  border-radius: calc(var(--r-sm) - 2px);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  transition: all var(--dur) var(--ease);
+}
+.switch__item--on {
+  background: var(--surface);
+  color: var(--ink-1);
+  box-shadow: var(--shadow-1);
 }
 
 .field {

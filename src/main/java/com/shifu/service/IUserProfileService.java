@@ -1,7 +1,7 @@
 package com.shifu.service;
 
-import com.shifu.entity.UserProfile;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.shifu.entity.UserProfile;
 
 /**
  * <p>
@@ -13,4 +13,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IUserProfileService extends IService<UserProfile> {
 
+    /**
+     * 按当前关注关系重算该用户的粉丝数与关注数。
+     * @param userId 用户 id
+     */
+    void recountFollowStats(Long userId);
 }

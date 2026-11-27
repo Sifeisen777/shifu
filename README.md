@@ -216,7 +216,8 @@ shifu-server/
 | `GET` | `/note/of/follow` | 关注流（滚动分页） |
 | `GET` | `/benefit/list/{merchantId}` | 商户权益卡列表 |
 | `POST` | `/benefit-order/seckill/{benefitId}` | 秒杀下单 |
-| `POST` | `/user/code`、`/user/login` | 验证码与登录 |
+| `POST` | `/user/code`、`/user/login` | 验证码与登录（支持验证码 / 密码两种方式） |
+| `PUT` | `/user/password` | 设置或修改登录密码 |
 | `GET` | `/user/me`、`/user/info/{id}` | 当前用户与资料 |
 | `PUT` | `/user/info` | 更新个人资料 |
 | `PUT` | `/follow/{id}/{isFollow}` | 关注 / 取关 |
@@ -230,6 +231,7 @@ shifu-server/
 - [RocketMQ 部署与接入](docs/RocketMQ部署与接入.md)：部署步骤、Topic 设计、降级策略
 - [到店助手](docs/到店助手.md)：工具设计、身份传递、记忆与降级策略
 - [秒杀压测报告](docs/压测报告.md)：测试模型、并发结果、瓶颈定位与调优对比
+- [账号认证与关注关系](docs/账号与关注关系.md)：双模式登录、密码存储、计数一致性约定
 - [前端工程说明](frontend/README.md)：目录结构、页面与接口映射、构建发布
 
 ## License

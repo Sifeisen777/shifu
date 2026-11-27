@@ -42,6 +42,7 @@ export const fetchMe = () => http.get('/user/me')
 export const fetchUser = (id) => http.get(`/user/${id}`)
 export const fetchUserProfile = (id) => http.get(`/user/info/${id}`)
 export const updateProfile = (payload) => http.put('/user/info', payload)
+export const setPassword = (payload) => http.put('/user/password', payload)
 export const signIn = () => http.post('/user/sign')
 export const fetchSignCount = () => http.get('/user/sign/count')
 

@@ -3,6 +3,7 @@ package com.shifu.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.shifu.dto.LoginFormDTO;
+import com.shifu.dto.PasswordFormDTO;
 import com.shifu.dto.ProfileFormDTO;
 import com.shifu.dto.Result;
 import com.shifu.dto.UserDTO;
@@ -45,13 +46,20 @@ public class UserController {
     }
 
     /**
-     * 登录功能
-     * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
+     * 登录功能：验证码登录与密码登录共用入口，按表单中携带的凭据分流
+     * @param loginForm 登录参数，包含手机号，以及验证码或密码
      */
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
-        // 实现登录功能
         return userService.login(loginForm, session);
+    }
+
+    /**
+     * 设置或修改登录密码（需已登录）
+     */
+    @PutMapping("/password")
+    public Result setPassword(@RequestBody PasswordFormDTO form) {
+        return userService.setPassword(form);
     }
 
     /**
@@ -86,8 +94,12 @@ public class UserController {
         // 查询详情
         UserProfile info = userInfoService.getById(userId);
         if (info == null) {
-            // 没有详情，应该是第一次查看详情
-            return Result.ok();
+            // 尚未填写过资料时返回零值对象，前端无需区分「无资料」与「计数为 0」
+            UserProfile empty = new UserProfile();
+            empty.setUserId(userId);
+            empty.setFans(0);
+            empty.setFollowee(0);
+            return Result.ok(empty);
         }
         info.setCreateTime(null);
         info.setUpdateTime(null);

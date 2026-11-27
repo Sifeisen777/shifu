@@ -8,10 +8,13 @@ import com.shifu.dto.UserDTO;
 import com.shifu.entity.Follow;
 import com.shifu.mapper.FollowMapper;
 import com.shifu.service.IFollowService;
+import com.shifu.service.IUserProfileService;
 import com.shifu.service.IUserService;
 import com.shifu.utils.UserHolder;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Resource;
 import java.util.Collections;
@@ -34,61 +37,68 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private IUserService userService;
+    @Resource
+    private IUserProfileService userProfileService;
 
     @Override
+    @Transactional
     public Result follow(Long followUserId, Boolean isFollow) {
-        // 1.获取登录用户
         Long userId = UserHolder.getUser().getId();
+        if (userId.equals(followUserId)) {
+            return Result.fail("不能关注自己");
+        }
         String key = "follows:" + userId;
-        // 1.判断到底是关注还是取关
-        if (isFollow) {
-            // 2.关注，新增数据
+
+        if (Boolean.TRUE.equals(isFollow)) {
+            // 已关注直接返回，重复点击不会让关系表多出记录，也不会重复计数
+            Long exists = query().eq("user_id", userId)
+                    .eq("follow_user_id", followUserId).count();
+            if (exists > 0) {
+                return Result.ok();
+            }
             Follow follow = new Follow();
             follow.setUserId(userId);
             follow.setFollowUserId(followUserId);
-            boolean isSuccess = save(follow);
-            if (isSuccess) {
-                // 把关注用户的id，放入redis的set集合 sadd userId followerUserId
-                stringRedisTemplate.opsForSet().add(key, followUserId.toString());
+            try {
+                save(follow);
+            } catch (DuplicateKeyException e) {
+                // 并发下由 (user_id, follow_user_id) 唯一索引兜底，视为已关注
+                return Result.ok();
             }
+            stringRedisTemplate.opsForSet().add(key, followUserId.toString());
         } else {
-            // 3.取关，删除 delete from biz_follow where user_id = ? and follow_user_id = ?
-            boolean isSuccess = remove(new QueryWrapper<Follow>()
+            // remove 返回是否真的删除了记录，未关注时的取关不触发计数回写
+            boolean removed = remove(new QueryWrapper<Follow>()
                     .eq("user_id", userId).eq("follow_user_id", followUserId));
-            if (isSuccess) {
-                // 把关注用户的id从Redis集合中移除
-                stringRedisTemplate.opsForSet().remove(key, followUserId.toString());
+            if (!removed) {
+                return Result.ok();
             }
+            stringRedisTemplate.opsForSet().remove(key, followUserId.toString());
         }
+
+        // 计数是关系表的派生值，重算而非增减，避免并发下丢失更新
+        userProfileService.recountFollowStats(userId);
+        userProfileService.recountFollowStats(followUserId);
         return Result.ok();
     }
 
     @Override
     public Result isFollow(Long followUserId) {
-        // 1.获取登录用户
         Long userId = UserHolder.getUser().getId();
-        // 2.查询是否关注 select count(*) from biz_follow where user_id = ? and follow_user_id = ?
-        // MyBatis-Plus 3.5.x 起 count() 返回 Long
         Long count = query().eq("user_id", userId).eq("follow_user_id", followUserId).count();
-        // 3.判断
         return Result.ok(count > 0);
     }
 
     @Override
     public Result followCommons(Long id) {
-        // 1.获取当前用户
         Long userId = UserHolder.getUser().getId();
         String key = "follows:" + userId;
-        // 2.求交集
         String key2 = "follows:" + id;
         Set<String> intersect = stringRedisTemplate.opsForSet().intersect(key, key2);
         if (intersect == null || intersect.isEmpty()) {
-            // 无交集
             return Result.ok(Collections.emptyList());
         }
-        // 3.解析id集合
         List<Long> ids = intersect.stream().map(Long::valueOf).collect(Collectors.toList());
-        // 4.查询用户
         List<UserDTO> users = userService.listByIds(ids)
                 .stream()
                 .map(user -> BeanUtil.copyProperties(user, UserDTO.class))

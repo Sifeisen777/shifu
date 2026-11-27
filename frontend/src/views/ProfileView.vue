@@ -6,7 +6,7 @@ import AppAvatar from '@/components/AppAvatar.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import NoteCard from '@/components/NoteCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { fetchFollowFeed, fetchMyNotes, fetchSignCount, fetchUserProfile, logout, signIn } from '@/api'
+import { fetchFollowFeed, fetchMyNotes, fetchSignCount, fetchUserProfile, logout, setPassword, signIn } from '@/api'
 import { useAuthStore } from '@/store/auth'
 import { relativeTime } from '@/utils/format'
 import toast from '@/utils/toast'
@@ -115,6 +115,31 @@ async function onLogout() {
   setTimeout(() => router.replace('/'), 240)
 }
 
+const passwordPanel = ref(false)
+const pwdForm = ref({ oldPassword: '', password: '', confirm: '' })
+const savingPassword = ref(false)
+
+async function onSavePassword() {
+  if (savingPassword.value) return
+  const { oldPassword, password, confirm } = pwdForm.value
+  if (!password || password.length < 6 || password.length > 32) {
+    return toast.error('密码长度需为 6~32 位')
+  }
+  if (password !== confirm) return toast.error('两次输入的密码不一致')
+
+  savingPassword.value = true
+  try {
+    await setPassword({ password, oldPassword: oldPassword || undefined })
+    toast.success('密码设置成功')
+    passwordPanel.value = false
+    pwdForm.value = { oldPassword: '', password: '', confirm: '' }
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    savingPassword.value = false
+  }
+}
+
 watch(tab, (value) => {
   if (value === 'feed' && !feed.value.length) loadFeed(true)
   if (value === 'sign') loadSignCount()
@@ -184,6 +209,50 @@ onMounted(() => {
       </div>
       <button class="btn btn--soft checkin__btn" :disabled="signing" @click="onSign">
         {{ signing ? '处理中' : '今日签到' }}
+      </button>
+    </div>
+
+    <!-- 账号安全 -->
+    <div class="security card">
+      <div class="security__left">
+        <p class="security__title">登录密码</p>
+        <p class="security__sub">设置后可用手机号 + 密码登录</p>
+      </div>
+      <button class="btn btn--soft security__btn" @click="passwordPanel = !passwordPanel">
+        {{ passwordPanel ? '收起' : '设置' }}
+      </button>
+    </div>
+
+    <div v-if="passwordPanel" class="pwd card">
+      <label class="pwd__field">
+        <span>原密码</span>
+        <input
+          v-model="pwdForm.oldPassword"
+          type="password"
+          maxlength="32"
+          placeholder="首次设置请留空"
+        />
+      </label>
+      <label class="pwd__field">
+        <span>新密码</span>
+        <input
+          v-model="pwdForm.password"
+          type="password"
+          maxlength="32"
+          placeholder="6~32 位"
+        />
+      </label>
+      <label class="pwd__field">
+        <span>确认</span>
+        <input
+          v-model="pwdForm.confirm"
+          type="password"
+          maxlength="32"
+          placeholder="再输入一次"
+        />
+      </label>
+      <button class="btn btn--primary btn--block" :disabled="savingPassword" @click="onSavePassword">
+        {{ savingPassword ? '保存中…' : '保存密码' }}
       </button>
     </div>
 
@@ -264,6 +333,57 @@ onMounted(() => {
 <style scoped>
 .me {
   background: var(--bg);
+}
+
+/* 账号安全 */
+.security {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 18px 0;
+  padding: 14px 16px;
+}
+.security__left {
+  flex: 1;
+  min-width: 0;
+}
+.security__title {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.security__sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.security__btn {
+  flex: none;
+}
+
+.pwd {
+  margin: 10px 18px 0;
+  padding: 16px;
+}
+.pwd__field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.pwd__field span {
+  flex: none;
+  width: 52px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.pwd__field input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
 }
 
 /* Hero */
