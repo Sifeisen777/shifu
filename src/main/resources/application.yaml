@@ -67,6 +67,11 @@ shifu:
       producer-group: note-feed-producer
       consumer-group: note-feed-consumer
       topic: note-feed-topic
+    # 笔记标题补写：标题为空时异步生成
+    title:
+      producer-group: note-title-producer
+      consumer-group: note-title-consumer
+      topic: note-title-topic
   # 客服助手
   assistant:
     enabled: ${ASSISTANT_ENABLED:true}

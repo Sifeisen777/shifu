@@ -3,6 +3,10 @@ import http from './http'
 /** 客服入口配置：是否开放、模型是否就绪 */
 export const fetchAssistantConfig = () => http.get('/assistant/config')
 
+/** 根据正文生成标题候选 */
+export const fetchTitleSuggestions = (content) =>
+  http.post('/assistant/note/title', { content })
+
 /**
  * 流式提问。
  *

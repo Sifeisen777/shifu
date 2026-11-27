@@ -1,7 +1,9 @@
 package com.shifu.agent.controller;
 
 import com.shifu.agent.dto.AssistantChatDTO;
+import com.shifu.agent.dto.NoteTitleRequest;
 import com.shifu.agent.service.AssistantService;
+import com.shifu.agent.service.NoteTitleService;
 import com.shifu.dto.Result;
 import com.shifu.dto.UserDTO;
 import com.shifu.utils.UserHolder;
@@ -38,6 +40,30 @@ public class AssistantController {
     private static final int MAX_QUESTION_LENGTH = 500;
 
     private final AssistantService assistantService;
+
+    private final NoteTitleService noteTitleService;
+
+    /**
+     * 发布页的标题建议：根据正文生成 3 个候选，登录后可用。
+     */
+    @PostMapping("/note/title")
+    public Result suggestTitle(@RequestBody NoteTitleRequest request) {
+        UserDTO user = UserHolder.getUser();
+        if (user == null) {
+            return Result.fail("登录后才能使用标题建议");
+        }
+        String content = request.getContent();
+        if (content == null || content.isBlank()) {
+            return Result.fail("先写点正文，再来想标题");
+        }
+        if (!noteTitleService.isReady()) {
+            return Result.fail("标题建议暂时不可用");
+        }
+        if (!noteTitleService.tryAcquire(user.getId())) {
+            return Result.fail("今天想标题的次数用完了，明天再来");
+        }
+        return Result.ok(noteTitleService.suggest(content));
+    }
 
     /**
      * 前端据此决定是否展示客服入口，以及提示当前是否处于简化模式。

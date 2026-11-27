@@ -11,6 +11,7 @@ import com.shifu.entity.Note;
 import com.shifu.entity.User;
 import com.shifu.mapper.NoteMapper;
 import com.shifu.mq.NoteFeedProducer;
+import com.shifu.mq.NoteTitleProducer;
 import com.shifu.service.IFeedService;
 import com.shifu.service.INoteService;
 import com.shifu.service.IUserService;
@@ -54,6 +55,9 @@ public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements IN
 
     @Resource
     private NoteFeedProducer noteFeedProducer;
+
+    @Resource
+    private NoteTitleProducer noteTitleProducer;
 
     @Override
     public Result queryHotNote(Integer current) {
@@ -167,6 +171,12 @@ public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements IN
             // MQ 不可用时降级为同步推送，保证关注流功能不失效
             log.warn("笔记发布事件投递失败，降级为同步推送，noteId={}", note.getId());
             feedService.pushNoteToFollowers(note.getId(), user.getId(), publishTime);
+        }
+
+        // 4.标题为空时补偿生成：模型响应时间不进发布链路，失败也不影响笔记本身
+        String title = note.getTitle();
+        if (title == null || title.trim().length() < 2) {
+            noteTitleProducer.send(note.getId());
         }
         return Result.ok(note.getId());
     }

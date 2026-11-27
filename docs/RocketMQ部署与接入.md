@@ -6,6 +6,7 @@
 | --- | --- | --- | --- |
 | `benefit-order-topic` | `benefit-order-producer` | `benefit-order-consumer` | 秒杀下单异步落库 |
 | `note-feed-topic` | `note-feed-producer` | `note-feed-consumer` | 笔记发布后向粉丝收件箱扇出 |
+| `note-title-topic` | `note-title-producer` | `note-title-consumer` | 标题为空时异步生成并回写 |
 
 ## 一、配置项
 
@@ -20,6 +21,10 @@ shifu:
       producer-group: note-feed-producer
       consumer-group: note-feed-consumer
       topic: note-feed-topic
+    title:
+      producer-group: note-title-producer
+      consumer-group: note-title-consumer
+      topic: note-title-topic
 ```
 
 客户端使用 `org.apache.rocketmq:rocketmq-client:5.3.4`，未引入 starter。生产者与消费者均为手写 Bean，通过 `@PostConstruct` / `@PreDestroy` 自行管理生命周期，避免与 Spring Boot 3 的自动配置产生版本耦合。
@@ -41,6 +46,7 @@ shifu:
 { "id": 664390544012607489, "userId": 1010, "benefitId": 50 }
 
 // note-feed-topic，key = note:{noteId}
+// note-title-topic，key = note-title:{noteId}
 { "noteId": 25, "authorId": 1012, "publishTime": 1795668560114 }
 ```
 
@@ -92,7 +98,7 @@ nohup sh bin/mqbroker -c conf/broker.conf -n 127.0.0.1:9876 &
 
 ## 五、运行验证
 
-1. 启动应用，日志中出现两条 Topic 的生产者与消费者启动成功
+1. 启动应用，日志中出现三条 Topic 的生产者与消费者启动成功
 2. 秒杀一单，确认：
    - Redis `seckill:stock:{benefitId}` 减 1
    - `biz_benefit_stock.stock` 同步减 1

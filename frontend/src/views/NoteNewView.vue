@@ -5,6 +5,7 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import AppNavBar from '@/components/AppNavBar.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { deleteImage, publishNote, searchMerchants, uploadImage } from '@/api'
+import { fetchTitleSuggestions } from '@/api/assistant'
 import toast from '@/utils/toast'
 
 const route = useRoute()
@@ -21,6 +22,8 @@ const searching = ref(false)
 const uploading = ref(false)
 const submitting = ref(false)
 const fileInput = ref(null)
+const candidates = ref([])
+const suggesting = ref(false)
 
 const canSubmit = computed(
   () => photos.value.length > 0 && title.value.trim().length > 0 && content.value.trim().length > 0
@@ -87,6 +90,30 @@ function onKeyword() {
 function chooseMerchant(m) {
   selected.value = { id: m.id, name: m.name }
   pickerOpen.value = false
+}
+
+async function suggestTitles() {
+  if (suggesting.value) return
+  const text = content.value.trim()
+  if (text.length < 12) {
+    toast.error('多写几句正文，才好提炼标题')
+    return
+  }
+  suggesting.value = true
+  try {
+    const { data } = await fetchTitleSuggestions(text)
+    candidates.value = data || []
+    if (!candidates.value.length) toast.error('没想出来，稍后再试')
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    suggesting.value = false
+  }
+}
+
+function useCandidate(text) {
+  title.value = text
+  candidates.value = []
 }
 
 function escapeHtml(text) {
@@ -173,13 +200,31 @@ onMounted(() => {
 
     <!-- 文字 -->
     <section class="words">
-      <input
-        v-model="title"
-        class="title-input"
-        type="text"
-        maxlength="40"
-        placeholder="写个标题，更容易被看到"
-      />
+      <div class="title-row">
+        <input
+          v-model="title"
+          class="title-input"
+          type="text"
+          maxlength="40"
+          placeholder="写个标题，更容易被看到"
+        />
+        <button class="suggest" type="button" :disabled="suggesting" @click="suggestTitles">
+          {{ suggesting ? '生成中' : '帮我想' }}
+        </button>
+      </div>
+
+      <div v-if="candidates.length" class="candidates">
+        <button
+          v-for="item in candidates"
+          :key="item"
+          class="candidate"
+          type="button"
+          @click="useCandidate(item)"
+        >
+          {{ item }}
+        </button>
+      </div>
+
       <div class="words__divider" />
       <textarea
         v-model="content"
@@ -339,11 +384,55 @@ onMounted(() => {
 .words {
   padding: 16px 18px 0;
 }
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .title-input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+.suggest {
+  flex: none;
+  padding: 6px 11px;
+  border: 1px solid var(--brand-line);
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.suggest:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.candidate {
+  max-width: 100%;
+  padding: 7px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.candidate:active {
+  border-color: var(--brand-line);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
 }
 .words__divider {
   height: 1px;
