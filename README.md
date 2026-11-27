@@ -197,6 +197,7 @@ shifu-server/
 │   ├── mapper/              XML 映射
 │   └── seckill.lua          秒杀原子脚本
 ├── frontend/                Vue 3 前端工程
+├── perf/                    压测脚本与数据夹具
 └── docs/                    部署文档与界面截图
 ```
 
@@ -228,6 +229,7 @@ shifu-server/
 
 - [RocketMQ 部署与接入](docs/RocketMQ部署与接入.md)：部署步骤、Topic 设计、降级策略
 - [到店助手](docs/到店助手.md)：工具设计、身份传递、记忆与降级策略
+- [秒杀压测报告](docs/压测报告.md)：测试模型、并发结果、瓶颈定位与调优对比
 - [前端工程说明](frontend/README.md)：目录结构、页面与接口映射、构建发布
 
 ## License
