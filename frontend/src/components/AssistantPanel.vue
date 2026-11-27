@@ -147,11 +147,23 @@ function references(text) {
   return result
 }
 
+function onKeydown(event) {
+  if (event.key === 'Escape') close()
+}
+
 watch(open, (value) => {
-  if (value) scrollToBottom()
+  if (value) {
+    scrollToBottom()
+    window.addEventListener('keydown', onKeydown)
+  } else {
+    window.removeEventListener('keydown', onKeydown)
+  }
 })
 
-onBeforeUnmount(() => controller?.abort())
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  controller?.abort()
+})
 </script>
 
 <template>
