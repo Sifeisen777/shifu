@@ -1,0 +1,42 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: hmdp
+  datasource:
+    # MySQL 8 驱动类（原 com.mysql.jdbc.Driver 已废弃）
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/hmdp?useSSL=false&serverTimezone=UTC&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234
+  # Spring Boot 3 起 Redis 配置前缀由 spring.redis 改为 spring.data.redis
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 123321
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 1
+          time-between-eviction-runs: 10s
+  jackson:
+    default-property-inclusion: non_null # JSON处理时忽略非空字段
+mybatis-plus:
+  type-aliases-package: com.hmdp.entity # 别名扫描包
+logging:
+  level:
+    com.hmdp: debug
+  pattern:
+    dateformat: mm:ss.SSS
+
+# RocketMQ：秒杀订单消息队列
+hmdp:
+  rocketmq:
+    # RocketMQ 部署在 Windows 本机（D:\rocketmq）
+    # 若以后换成虚拟机/服务器部署，改成对应 IP 即可，例如 192.168.100.130:9876
+    name-server: 127.0.0.1:9876
+    producer-group: seckill-order-producer
+    consumer-group: seckill-order-consumer
+    topic: seckill-order-topic
