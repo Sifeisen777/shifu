@@ -3,6 +3,23 @@ server:
 spring:
   application:
     name: shifu
+  config:
+    # 本地密钥文件，不纳入版本控制；缺失时按可选处理，不影响启动
+    import: optional:file:./config/application-secret.yaml
+  # 客服助手：走 DeepSeek 的 OpenAI 兼容接口，换模型只需改 base-url 与 model
+  ai:
+    openai:
+      # 占位值用于保证未配置密钥时应用仍能启动，此时助手自动降级为规则应答
+      api-key: ${DEEPSEEK_API_KEY:disabled}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${DEEPSEEK_MODEL:deepseek-chat}
+          temperature: 0.3
+          # 单次回答的 token 上限，控制成本
+          max-tokens: ${ASSISTANT_MAX_TOKENS:800}
+          # 流式响应末尾附带用量，便于统计开销
+          stream-usage: true
   datasource:
     # MySQL 8 驱动类（原 com.mysql.jdbc.Driver 已废弃）
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -50,3 +67,14 @@ shifu:
       producer-group: note-feed-producer
       consumer-group: note-feed-consumer
       topic: note-feed-topic
+  # 客服助手
+  assistant:
+    enabled: ${ASSISTANT_ENABLED:true}
+    # 单个用户每窗口期最多提问次数，防止刷量消耗模型额度
+    rate-limit:
+      max-requests: 20
+      window: 10m
+    # 会话记忆：保留最近消息条数与会话过期时间
+    memory:
+      max-messages: 20
+      ttl: 2h
