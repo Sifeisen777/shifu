@@ -1,6 +1,8 @@
 package com.shifu.agent.tools;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.shifu.agent.knowledge.KnowledgeBase;
+import com.shifu.agent.knowledge.KnowledgeHit;
 import com.shifu.entity.Benefit;
 import com.shifu.entity.BenefitOrder;
 import com.shifu.entity.Merchant;
@@ -58,19 +60,48 @@ public class AssistantTools {
     private final IBenefitService benefitService;
     private final IBenefitOrderService benefitOrderService;
     private final StringRedisTemplate stringRedisTemplate;
+    private final KnowledgeBase knowledgeBase;
 
     public AssistantTools(Long userId,
                           IMerchantService merchantService,
                           IMerchantCategoryService categoryService,
                           IBenefitService benefitService,
                           IBenefitOrderService benefitOrderService,
-                          StringRedisTemplate stringRedisTemplate) {
+                          StringRedisTemplate stringRedisTemplate,
+                          KnowledgeBase knowledgeBase) {
         this.userId = userId;
         this.merchantService = merchantService;
         this.categoryService = categoryService;
         this.benefitService = benefitService;
         this.benefitOrderService = benefitOrderService;
         this.stringRedisTemplate = stringRedisTemplate;
+        this.knowledgeBase = knowledgeBase;
+    }
+
+    @Tool(name = "search_knowledge",
+            description = "检索平台规则文档：券的使用与有效期、退款与取消、限时秒杀、笔记发布规范、"
+                    + "账号登录、商户信息说明。用户询问规则、政策、流程、能不能、怎么办时先调用本工具，"
+                    + "回答需以上述检索结果为依据，并在末尾标注来源文档标题。")
+    public String searchKnowledge(
+            @ToolParam(description = "用户问题或其中的规则要点，例如「未核销的券能退吗」") String query) {
+        return safe("检索平台规则", () -> {
+            if (query == null || query.isBlank()) {
+                return "缺少检索内容。";
+            }
+            List<KnowledgeHit> hits = knowledgeBase.search(query, 3);
+            if (hits.isEmpty()) {
+                return "知识库中没有与该问题对应的条款。";
+            }
+            List<Map<String, Object>> rows = new ArrayList<>(hits.size());
+            for (KnowledgeHit hit : hits) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("文档", hit.title());
+                row.put("片段", hit.snippet());
+                row.put("相关度", hit.score());
+                rows.add(row);
+            }
+            return toJson(rows);
+        });
     }
 
     @Tool(name = "search_merchants",

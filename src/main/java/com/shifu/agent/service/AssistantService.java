@@ -1,6 +1,8 @@
 package com.shifu.agent.service;
 
 import com.shifu.agent.config.AssistantProperties;
+import com.shifu.agent.knowledge.KnowledgeBase;
+import com.shifu.agent.knowledge.KnowledgeHit;
 import com.shifu.agent.support.FallbackReplies;
 import com.shifu.agent.tools.AssistantTools;
 import com.shifu.service.IBenefitOrderService;
@@ -18,6 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -40,6 +43,7 @@ public class AssistantService {
     private final IMerchantCategoryService merchantCategoryService;
     private final IBenefitService benefitService;
     private final IBenefitOrderService benefitOrderService;
+    private final KnowledgeBase knowledgeBase;
 
     public AssistantService(AssistantProperties properties,
                             ObjectProvider<ChatClient> chatClientProvider,
@@ -48,7 +52,8 @@ public class AssistantService {
                             IMerchantService merchantService,
                             IMerchantCategoryService merchantCategoryService,
                             IBenefitService benefitService,
-                            IBenefitOrderService benefitOrderService) {
+                            IBenefitOrderService benefitOrderService,
+                            KnowledgeBase knowledgeBase) {
         this.properties = properties;
         this.chatClientProvider = chatClientProvider;
         this.apiKey = apiKey;
@@ -57,6 +62,16 @@ public class AssistantService {
         this.merchantCategoryService = merchantCategoryService;
         this.benefitService = benefitService;
         this.benefitOrderService = benefitOrderService;
+        this.knowledgeBase = knowledgeBase;
+    }
+
+    /** 规则库检索，供诊断接口与工具复用 */
+    public List<KnowledgeHit> searchKnowledge(String query, int topK) {
+        return knowledgeBase.search(query, topK);
+    }
+
+    public List<String> knowledgeTitles() {
+        return knowledgeBase.titles();
     }
 
     public boolean isEnabled() {
@@ -110,7 +125,7 @@ public class AssistantService {
         }
 
         AssistantTools tools = new AssistantTools(userId, merchantService, merchantCategoryService,
-                benefitService, benefitOrderService, stringRedisTemplate);
+                benefitService, benefitOrderService, stringRedisTemplate, knowledgeBase);
 
         StringBuilder answer = new StringBuilder();
         AtomicReference<String> usage = new AtomicReference<>("未采集");

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
@@ -47,6 +48,19 @@ public class AssistantController {
         data.put("enabled", assistantService.isEnabled());
         data.put("modelReady", assistantService.isModelReady());
         return Result.ok(data);
+    }
+
+    /**
+     * 规则库诊断：不带参数返回文档清单，带 q 返回检索命中片段。
+     */
+    @GetMapping("/knowledge")
+    public Result knowledge(@RequestParam(required = false) String q) {
+        if (q == null || q.isBlank()) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("documents", assistantService.knowledgeTitles());
+            return Result.ok(data);
+        }
+        return Result.ok(assistantService.searchKnowledge(q, 5));
     }
 
     /**

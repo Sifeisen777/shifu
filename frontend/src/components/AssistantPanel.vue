@@ -151,6 +151,22 @@ function onKeydown(event) {
   if (event.key === 'Escape') close()
 }
 
+/** 来源已单独渲染为标签，正文里的「来源：…」行去掉，避免重复 */
+function answerBody(text) {
+  return String(text).replace(/\n*来源[:：][^\n]*$/, '')
+}
+
+/** 识别回答中标注的规则来源《文档标题》 */
+function sources(text) {
+  const result = []
+  const pattern = /《([^》]{2,20})》/g
+  let match
+  while ((match = pattern.exec(String(text))) !== null) {
+    if (!result.includes(match[1])) result.push(match[1])
+  }
+  return result
+}
+
 watch(open, (value) => {
   if (value) {
     scrollToBottom()
@@ -210,11 +226,16 @@ onBeforeUnmount(() => {
               :class="`msg--${msg.role}`"
             >
               <div class="bubble">
-                <template v-for="(seg, i) in segments(msg.text)" :key="i">
+                <template v-for="(seg, i) in segments(answerBody(msg.text))" :key="i">
                   <strong v-if="seg.bold">{{ seg.text }}</strong>
                   <span v-else>{{ seg.text }}</span>
                 </template>
                 <span v-if="msg.streaming" class="caret" />
+              </div>
+
+              <div v-if="msg.role === 'assistant' && !msg.streaming && sources(msg.text).length" class="sources">
+                <span class="sources__label">依据</span>
+                <span v-for="title in sources(msg.text)" :key="title" class="source">{{ title }}</span>
               </div>
 
               <div v-if="msg.role === 'assistant' && !msg.streaming && references(msg.text).length" class="refs">
@@ -461,6 +482,27 @@ onBeforeUnmount(() => {
   50% {
     opacity: 0;
   }
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sources__label {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+.source {
+  padding: 3px 8px;
+  border-radius: var(--r-xs);
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .refs {
