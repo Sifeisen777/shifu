@@ -1,5 +1,6 @@
 <script setup>
 import { toasts } from '@/utils/toast'
+import AssistantPanel from '@/components/AssistantPanel.vue'
 </script>
 
 <template>
@@ -9,6 +10,8 @@ import { toasts } from '@/utils/toast'
         <component :is="Component" />
       </transition>
     </router-view>
+
+    <AssistantPanel />
 
     <div class="toaster" role="status" aria-live="polite">
       <transition-group name="toast">

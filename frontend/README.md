@@ -50,6 +50,8 @@ frontend/
 | `/me/edit` | 资料编辑 | `GET /user/info/{id}`、`PUT /user/info` |
 | `/user/:id` | 他人主页：关注与共同关注 | `GET /user/{id}`、`GET /follow/common/{id}` |
 
+页面之外，`components/AssistantPanel.vue` 作为全局抽屉挂在 `App.vue` 上：悬浮入口打开面板，通过 `fetch` 读取 SSE 流实现逐字渲染，回答中的商户引用可跳转详情页。流式请求不走 axios —— 浏览器端的 axios 拿不到增量响应。
+
 ## 开发与构建
 
 ```bash
