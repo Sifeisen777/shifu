@@ -1,123 +1,189 @@
+<div align="center">
+
 # 食赴 ShiFu
 
-面向「到店」场景的本地生活社区：用户按分类发现商户、领取到店权益卡、发布实拍笔记，并通过关注关系形成信息流。
+面向「到店」场景的本地生活社区 · 商户发现 / 权益卡秒杀 / 实拍笔记 / 关注流
 
-后端 Spring Boot 3 + MySQL + Redis + RocketMQ，前端 Vue 3 前后端分离，秒杀下单走 Redis + Lua 原子扣减，再经 RocketMQ 异步落库。
+![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.16-6DB33F?style=flat-square)
+![Vue](https://img.shields.io/badge/Vue-3-42B883?style=flat-square)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square)
+![Redis](https://img.shields.io/badge/Redis-8-DC382D?style=flat-square)
+![RocketMQ](https://img.shields.io/badge/RocketMQ-5.3-D77310?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
----
+</div>
 
-## 技术栈
+## 项目简介
 
-| 层 | 技术 |
-|---|---|
-| 运行时 | JDK 17、Spring Boot 3.5 |
-| 持久层 | MyBatis-Plus 3.5、MySQL 8.0 |
-| 缓存 / 中间件 | Redis 8（缓存、GEO、点赞 ZSet、Feed 收件箱）、Redisson（分布式锁）、RocketMQ 5.3（订单异步落库） |
-| 构建 | Maven |
-| 前端 | Vue 3 + Vite 6 + Vue Router 4 + Pinia + Axios（自建设计系统，未用组件库） |
-| 静态托管 | nginx（静态资源 + `/api` 反向代理） |
+食赴是一个前后端分离的本地生活社区应用。用户按分类浏览周边商户、领取到店权益卡，发布带图的到店体验笔记，并通过关注关系形成个性化信息流。
+
+与常见的单体示例应用不同，本项目在业务功能之上完整实现了缓存一致性、高并发下单、异步消息与前后端工程化等生产环境关注点：秒杀链路采用 Redis + Lua 原子扣减并交由 RocketMQ 异步落库；关注流采用异步扇出配合 pipeline 批量写入；前端为独立工程，具备设计系统、路由分包与统一请求层。
 
 ## 功能
 
 | 模块 | 能力 |
-|---|---|
-| 商户 | 分类浏览、按距离/评分/人气排序、关键字搜索、详情与图集 |
-| 笔记 | 热门瀑布流、图文发布（多图上传）、点赞、关注作者、关注流（Feed） |
-| 权益卡 | 商户权益列表、限时秒杀（Redis + Lua 预扣库存、MQ 异步落库） |
-| 账户 | 手机验证码登录、资料编辑、每日打卡、他人主页与共同关注 |
-| 基础设施 | 商户 GEO 索引自动初始化、登录 token 服务端失效、统一响应与异常 |
+| --- | --- |
+| 商户 | 分类浏览、按距离 / 评分 / 人气排序、关键字搜索、详情与图集 |
+| 笔记 | 热门瀑布流、图文发布（多图上传）、点赞、关注作者、关注流 |
+| 权益卡 | 商户权益列表、限时秒杀、库存与时间窗校验 |
+| 账户 | 手机验证码登录、资料编辑、每日签到、他人主页与共同关注 |
+| 基础能力 | 分布式 ID、登录态管理、全局异常处理、统一响应结构 |
 
-## 架构
+## 界面预览
 
+| 首页 | 商户列表 | 商户详情 |
+| :---: | :---: | :---: |
+| ![首页](docs/screenshots/home.jpg) | ![商户列表](docs/screenshots/merchant-list.jpg) | ![商户详情](docs/screenshots/merchant-detail.jpg) |
+
+| 笔记详情 | 个人主页 | 发布笔记 |
+| :---: | :---: | :---: |
+| ![笔记详情](docs/screenshots/note-detail.jpg) | ![个人主页](docs/screenshots/profile.jpg) | ![发布笔记](docs/screenshots/publish.jpg) |
+
+## 系统架构
+
+```mermaid
+flowchart LR
+    client["浏览器 / 移动端"] -->|HTTP| nginx["nginx :8080"]
+    nginx -->|静态资源| spa["Vue 3 构建产物"]
+    nginx -->|"/api 反向代理"| app["Spring Boot :8081"]
+    app --> mysql[("MySQL 8")]
+    app --> redis[("Redis 8")]
+    app -->|"秒杀订单 / 发布事件"| mq["RocketMQ"]
+    mq -->|"异步消费"| app
 ```
-                    ┌──────────────────────────────┐
-   浏览器  ───────►  │  nginx :8080                 │
-                    │  ├─ /        → html/shifu     │  Vue3 构建产物
-                    │  └─ /api/*   → 127.0.0.1:8081 │  反向代理
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │  shifu-server :8081          │
-                    │  Controller → Service → Mapper│
-                    └───┬──────────┬──────────┬────┘
-                        │          │          │
-                   ┌────▼───┐ ┌────▼───┐ ┌────▼─────┐
-                   │ MySQL  │ │ Redis  │ │ RocketMQ │
-                   │ 业务数据│ │缓存/GEO│ │ 订单异步 │
-                   └────────┘ └────────┘ └──────────┘
-```
 
-### 秒杀链路
+职责划分：
 
-1. 前端 `POST /benefit-order/seckill/{id}`
-2. 服务端校验权益卡类型与时间窗，再执行 `seckill.lua`：校验库存与一人一单，原子扣减并写入下单标记
-3. 脚本返回 0 则投递 RocketMQ；投递失败回滚 Redis 库存与标记，保证不超卖
-4. 消费者落库生成订单
+- **nginx** 托管前端构建产物并反向代理 `/api`，同时承载用户上传的图片
+- **应用层** 采用 Controller → Service → Mapper 三层结构，横向切面处理登录态、异常与统一响应
+- **Redis** 承担缓存、秒杀库存预扣、商户地理索引、点赞集合、关注流收件箱与会话令牌
+- **RocketMQ** 承担秒杀订单落库与笔记发布扇出两条异步链路
+
+## 技术栈
+
+| 分类 | 选型 |
+| --- | --- |
+| 运行时 | JDK 17、Spring Boot 3.5.16 |
+| 持久层 | MyBatis-Plus 3.5、MySQL 8.0 |
+| 缓存与中间件 | Redis 8、Redisson、RocketMQ 5.3.4 |
+| 前端 | Vue 3、Vite 6、Vue Router 4、Pinia、Axios |
+| 静态托管 | nginx |
+
+## 核心实现
+
+### 秒杀下单
+
+请求先经 Java 层校验权益卡类型与时间窗，再执行 Lua 脚本完成「库存校验 + 一人一单 + 扣减 + 下单标记」的原子操作，判定通过后投递 RocketMQ 异步落库。消息投递失败时回滚 Redis 库存与下单标记，避免出现扣减库存却无订单的中间态；消费端以用户维度加分布式锁并复查订单，保证消息重投下的幂等。
 
 ### 关注流扇出
 
-发布笔记后不在请求线程里遍历粉丝写 Redis（粉丝一万＝一万次往返），而是投递 `note-feed-topic`，
-由消费者回查粉丝列表、按 500 一批走 pipeline 写各自的收件箱。
-MQ 不可用时自动降级为同步推送，功能不丢，只是失去削峰能力。
+发布笔记后不在请求线程遍历粉丝写入收件箱，而是投递发布事件，由消费端查询粉丝列表并按每批 500 条通过 pipeline 写入各用户的 `feed:{userId}` 有序集合，使接口耗时与粉丝规模解耦。消息中间件不可用时自动降级为同步推送，功能不受影响。
+
+### 商户地理检索
+
+商户坐标在应用启动时幂等写入 Redis GEO 索引，按类型分页检索时执行 `GEOSEARCH` 并按距离排序；索引缺失或半径内无命中时回退数据库查询，避免列表空白。
+
+### 缓存与一致性
+
+商户详情、商户类型、笔记详情采用 Cache Aside 策略，热点数据设置逻辑过期以规避缓存击穿；点赞与关注关系使用集合结构支撑幂等操作。
 
 ## 快速开始
 
-### 1. 准备依赖
+### 环境要求
 
-- MySQL 8.0，导入 `src/main/resources/db/shifu.sql`
-- Redis（默认 `127.0.0.1:6379`）
-- RocketMQ NameServer `9876` / Broker `10911`（未启动只影响秒杀落库，不影响启动）
+| 依赖 | 版本 | 端口 |
+| --- | --- | --- |
+| JDK | 17+ | - |
+| MySQL | 8.0 | 3306 |
+| Redis | 7+ | 6379 |
+| RocketMQ | 5.x（可选） | 9876 / 10911 |
+| Node.js | 18+ | - |
 
-配置在 `src/main/resources/application.yaml`。
+RocketMQ 未部署时应用仍可启动，秒杀与异步扇出功能自动降级。
+
+### 1. 初始化数据库
+
+```bash
+mysql -uroot -p -e "CREATE DATABASE shifu DEFAULT CHARSET utf8mb4;"
+mysql -uroot -p shifu < src/main/resources/db/shifu.sql
+```
 
 ### 2. 启动后端
+
+配置位于 `src/main/resources/application.yaml`，数据库与 Redis 口令默认从环境变量读取，未设置时使用本机开发默认值。
 
 ```bash
 mvn clean package -DskipTests
 java -jar target/shifu-server-1.0.0-SNAPSHOT.jar
 ```
 
-> 一定要带 `clean`：`target` 里残留旧资源会被打进 jar，导致启动时找不到映射文件。
+服务默认监听 `8081`。
 
 ### 3. 启动前端
 
 ```bash
 cd frontend
 npm install
-npm run dev          # http://localhost:5173
+npm run dev        # 开发模式，/api 自动代理至 8081
 ```
 
-或构建后交给 nginx：
+生产构建与发布：
 
 ```bash
-npm run publish:nginx   # 构建并写入 nginx 静态目录
+npm run build
+npm run publish:nginx    # 构建产物写入 nginx 静态目录
 ```
 
-nginx 配置见 `frontend/README.md`。
+nginx 需为前端 history 路由配置回退，详见 [frontend/README.md](frontend/README.md)。
 
-## 目录结构
+## 项目结构
 
 ```
-├─ src/main/java/com/shifu/
-│  ├─ controller/       # 9 个 REST 控制器
-│  ├─ service/          # 业务接口与实现
-│  ├─ mapper/           # MyBatis-Plus Mapper
-│  ├─ entity/           # 表实体
-│  ├─ dto/              # 统一响应、DTO、滚动分页
-│  ├─ config/           # MVC 拦截器、Redisson、GEO 初始化
-│  ├─ mq/               # 秒杀订单生产者 / 消费者
-│  └─ utils/            # 常量、登录上下文、ID 生成器
-├─ src/main/resources/
-│  ├─ application.yaml
-│  ├─ db/shifu.sql      # 建表与种子数据
-│  ├─ mapper/           # XML 映射
-│  └─ seckill.lua       # 秒杀原子脚本
-├─ frontend/            # Vue 3 前端（见 frontend/README.md）
-└─ docs/                # 部署与重构说明
+shifu-server/
+├── src/main/java/com/shifu/
+│   ├── controller/          REST 接口层
+│   ├── service/             业务接口与实现
+│   ├── mapper/              MyBatis-Plus Mapper
+│   ├── entity/              数据表实体
+│   ├── dto/                 统一响应、表单与分页对象
+│   ├── config/              MVC 拦截器、Redisson、地理索引初始化
+│   ├── mq/                  秒杀订单与发布事件的生产者 / 消费者
+│   └── utils/               常量、登录上下文、分布式 ID、Lua 脚本支持
+├── src/main/resources/
+│   ├── application.yaml     应用配置
+│   ├── db/shifu.sql         建表语句与初始数据
+│   ├── mapper/              XML 映射
+│   └── seckill.lua          秒杀原子脚本
+├── frontend/                Vue 3 前端工程
+└── docs/                    部署文档与界面截图
 ```
+
+## 接口一览
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/merchant-category/list` | 商户类型列表 |
+| `GET` | `/merchant/of/type` | 按类型分页检索商户（支持坐标与排序） |
+| `GET` | `/merchant/of/name` | 商户关键字搜索 |
+| `GET` | `/merchant/{id}` | 商户详情 |
+| `GET` | `/note/hot` | 热门笔记分页 |
+| `GET` | `/note/{id}` | 笔记详情 |
+| `POST` | `/note` | 发布笔记 |
+| `PUT` | `/note/like/{id}` | 点赞 / 取消点赞 |
+| `GET` | `/note/of/follow` | 关注流（滚动分页） |
+| `GET` | `/benefit/list/{merchantId}` | 商户权益卡列表 |
+| `POST` | `/benefit-order/seckill/{benefitId}` | 秒杀下单 |
+| `POST` | `/user/code`、`/user/login` | 验证码与登录 |
+| `GET` | `/user/me`、`/user/info/{id}` | 当前用户与资料 |
+| `PUT` | `/user/info` | 更新个人资料 |
+| `PUT` | `/follow/{id}/{isFollow}` | 关注 / 取关 |
 
 ## 文档
 
-- [`docs/重构方案.md`](docs/重构方案.md)：从教学项目到本项目的命名与结构调整
-- [`docs/RocketMQ部署与接入.md`](docs/RocketMQ部署与接入.md)：RocketMQ 部署与项目接入
-- [`frontend/README.md`](frontend/README.md)：前端结构、接口映射与设计决定
+- [RocketMQ 部署与接入](docs/RocketMQ部署与接入.md)：部署步骤、Topic 设计、降级策略
+- [前端工程说明](frontend/README.md)：目录结构、页面与接口映射、构建发布
+
+## License
+
+[MIT](LICENSE)
