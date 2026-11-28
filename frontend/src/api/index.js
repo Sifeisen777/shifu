@@ -20,6 +20,10 @@ export const fetchNoteLikes = (id) => http.get(`/note/likes/${id}`)
 export const toggleLike = (id) => http.put(`/note/like/${id}`)
 export const publishNote = (payload) => http.post('/note', payload)
 
+/** 评论 */
+export const fetchComments = (noteId) => http.get(`/note-comment/list/${noteId}`)
+export const postComment = (payload) => http.post('/note-comment', payload)
+
 /** 权益卡（券） */
 export const fetchBenefits = (merchantId) => http.get(`/benefit/list/${merchantId}`)
 export const seckill = (benefitId) => http.post(`/benefit-order/seckill/${benefitId}`)

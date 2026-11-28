@@ -96,7 +96,11 @@ flowchart LR
 
 ### 缓存与一致性
 
-商户详情、商户类型、笔记详情采用 Cache Aside 策略，热点数据设置逻辑过期以规避缓存击穿；点赞与关注关系使用集合结构支撑幂等操作。
+商户详情、商户类型、笔记详情采用 Cache Aside 策略，空值缓存拦截穿透；点赞与关注关系使用集合结构支撑幂等操作。关注数、评论数与秒杀库存都以数据库为权威值：计数按关系表或评论表重算，库存由消费者落库，Redis 侧的库存键在应用启动时按数据库补写。
+
+### 访问控制
+
+令牌通过 `authorization` 头传递，服务端在 Redis 中保存登录态并在每次请求时续期。首页、商户、笔记详情、他人主页、评论列表等只读接口允许游客访问；发布、点赞、关注、评论、下单、上传等写接口统一要求登录。拦截按「GET + 路径」判定，而不是整段前缀放行，避免把同前缀下的写接口一并暴露。
 
 ### 到店助手
 
@@ -137,6 +141,8 @@ RocketMQ 未部署时应用仍可启动，秒杀与异步扇出功能自动降�
 ```bash
 mysql -uroot -p -e "CREATE DATABASE shifu DEFAULT CHARSET utf8mb4;"
 mysql -uroot -p shifu < src/main/resources/db/shifu.sql
+# 可选：导入 3 张限时秒杀券（库存 100），用于体验抢购链路
+mysql -uroot -p shifu < src/main/resources/db/seed-seckill-benefit.sql
 ```
 
 ### 2. 启动后端
@@ -214,13 +220,19 @@ shifu-server/
 | `POST` | `/note` | 发布笔记 |
 | `PUT` | `/note/like/{id}` | 点赞 / 取消点赞 |
 | `GET` | `/note/of/follow` | 关注流（滚动分页） |
+| `GET` | `/note/of/me`、`/note/of/user` | 我的笔记与他人笔记 |
+| `GET` | `/note/likes/{id}` | 点赞用户（前 5 位） |
+| `GET` | `/note-comment/list/{noteId}` | 笔记最新评论 |
+| `POST` | `/note-comment` | 发布评论 |
 | `GET` | `/benefit/list/{merchantId}` | 商户权益卡列表 |
 | `POST` | `/benefit-order/seckill/{benefitId}` | 秒杀下单 |
 | `POST` | `/user/code`、`/user/login` | 验证码与登录（支持验证码 / 密码两种方式） |
 | `PUT` | `/user/password` | 设置或修改登录密码 |
 | `GET` | `/user/me`、`/user/info/{id}` | 当前用户与资料 |
+| `GET` | `/user/{id}` | 用户公开信息 |
 | `PUT` | `/user/info` | 更新个人资料 |
 | `PUT` | `/follow/{id}/{isFollow}` | 关注 / 取关 |
+| `GET` | `/follow/or/not/{id}` | 是否已关注 |
 | `POST` | `/assistant/chat` | 到店助手流式问答（SSE） |
 | `GET` | `/assistant/config` | 助手可用状态 |
 | `GET` | `/assistant/knowledge` | 规则库清单与检索诊断 |

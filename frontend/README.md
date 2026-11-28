@@ -43,7 +43,7 @@ frontend/
 | `/` | 首页：分类入口与热门笔记瀑布流 | `GET /merchant-category/list`、`GET /note/hot` |
 | `/merchants` | 商户列表：分类切换、排序、触底加载 | `GET /merchant/of/type` |
 | `/merchant/:id` | 商户详情：图集、权益卡、秒杀 | `GET /merchant/{id}`、`GET /benefit/list/{id}` |
-| `/note/:id` | 笔记详情：图集、点赞、关注 | `GET /note/{id}`、`PUT /note/like/{id}` |
+| `/note/:id` | 笔记详情：图集、点赞、关注、评论 | `GET /note/{id}`、`PUT /note/like/{id}`、`GET /note-comment/list/{id}`、`POST /note-comment` |
 | `/note/new` | 发布笔记：多图上传、关联商户 | `POST /media/note`、`POST /note` |
 | `/login` | 登录（验证码 / 密码切换） | `POST /user/code`、`POST /user/login` |
 | `/me` | 个人主页：笔记、关注流、签到、密码设置 | `GET /user/me`、`GET /note/of/follow`、`PUT /user/password` |

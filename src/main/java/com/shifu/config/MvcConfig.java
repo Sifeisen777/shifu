@@ -18,14 +18,10 @@ public class MvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 登录拦截器
+        // 公开只读接口由 LoginInterceptor 按「GET + 路径」判定，这里只排除无需登录的写入口，
+        // 避免整段前缀放行后把新增/修改/删除一并暴露给游客
         registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
-                        "/merchant/**",
-                        "/benefit/**",
-                        "/merchant-category/**",
-                        "/media/**",
-                        // 单段路径：/note/hot 与 /note/{id}，笔记详情允许游客浏览
-                        "/note/*",
                         "/user/code",
                         "/user/login",
                         // 客服助手：游客可咨询找店与规则，涉及个人订单时由工具内部判定身份

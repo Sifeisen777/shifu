@@ -49,6 +49,13 @@ public class CacheClient {
         String json = stringRedisTemplate.opsForValue().get(key);
         // 2.判断是否存在
         if (StrUtil.isNotBlank(json)) {
+            // 兼容早期「逻辑过期」方案写入的 {"expireTime":...,"data":{...}}，
+            // 直接按实体解析会因为字段对不上得到空对象
+            JSONObject wrapper = JSONUtil.parseObj(json);
+            Object data = wrapper.get("data");
+            if (data instanceof JSONObject) {
+                return JSONUtil.toBean((JSONObject) data, type);
+            }
             // 3.存在，直接返回
             return JSONUtil.toBean(json, type);
         }

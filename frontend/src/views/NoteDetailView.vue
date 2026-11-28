@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BaseIcon from '@/components/BaseIcon.vue'
 import AppAvatar from '@/components/AppAvatar.vue'
 import ScoreStars from '@/components/ScoreStars.vue'
-import { fetchMerchant, fetchNote, fetchNoteLikes, follow, isFollowing, toggleLike } from '@/api'
+import { fetchComments, fetchMerchant, fetchNote, fetchNoteLikes, follow, isFollowing, postComment, toggleLike } from '@/api'
 import { useAuthStore } from '@/store/auth'
 import { imageUrl, relativeTime, splitImages, yuan } from '@/utils/format'
 import toast from '@/utils/toast'
@@ -16,6 +16,10 @@ const auth = useAuthStore()
 const note = ref(null)
 const merchant = ref(null)
 const likers = ref([])
+const comments = ref([])
+const commentText = ref('')
+const commenting = ref(false)
+const commentSection = ref(null)
 const followed = ref(false)
 const loading = ref(true)
 const error = ref('')
@@ -34,7 +38,8 @@ async function load() {
     const { data } = await fetchNote(route.params.id)
     note.value = data
     if (data?.merchantId) loadMerchant(data.merchantId)
-    // 点赞用户列表是受保护接口，游客不请求，否则会触发 401 跳登录
+    // 评论与点赞用户都是公开数据，游客也一并加载
+    loadComments()
     if (auth.isLogin) loadLikers()
     if (auth.isLogin && data?.userId && data.userId !== auth.userId) loadFollow(data.userId)
   } catch (e) {
@@ -60,6 +65,37 @@ async function loadLikers() {
   } catch {
     likers.value = []
   }
+}
+
+async function loadComments() {
+  try {
+    const { data } = await fetchComments(route.params.id)
+    comments.value = data || []
+  } catch {
+    comments.value = []
+  }
+}
+
+async function onComment() {
+  if (!requireLogin() || commenting.value) return
+  const content = commentText.value.trim()
+  if (!content) return
+  commenting.value = true
+  try {
+    await postComment({ noteId: note.value.id, content })
+    commentText.value = ''
+    note.value.comments = (note.value.comments || 0) + 1
+    await loadComments()
+    toast.success('评论已发布')
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    commenting.value = false
+  }
+}
+
+function scrollToComments() {
+  commentSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 async function loadFollow(userId) {
@@ -236,6 +272,44 @@ onMounted(load)
         <span class="likes__count">{{ note.liked || 0 }} 人点赞</span>
       </section>
 
+      <!-- 评论 -->
+      <section ref="commentSection" class="comments">
+        <h2 class="comments__title">
+          评论
+          <span class="comments__total">{{ note.comments || 0 }}</span>
+        </h2>
+        <ul v-if="comments.length" class="comments__list">
+          <li v-for="c in comments" :key="c.id" class="comment">
+            <AppAvatar :src="c.icon" :name="c.nickName" :size="30" />
+            <div class="comment__main">
+              <div class="comment__meta">
+                <span class="comment__name">{{ c.nickName || '食客' }}</span>
+                <span class="comment__time">{{ relativeTime(c.createTime) }}</span>
+              </div>
+              <p class="comment__text">{{ c.content }}</p>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="comments__empty">还没有评论，来坐第一排</p>
+
+        <div class="comment-box">
+          <input
+            v-model="commentText"
+            class="comment-box__input"
+            maxlength="200"
+            placeholder="说点什么…"
+            @keyup.enter="onComment"
+          />
+          <button
+            class="btn btn--primary comment-box__send"
+            :disabled="commenting || !commentText.trim()"
+            @click="onComment"
+          >
+            发送
+          </button>
+        </div>
+      </section>
+
       <p class="footnote">食赴 · 内容由用户发布，仅供参考</p>
 
       <!-- 底部操作 -->
@@ -244,7 +318,7 @@ onMounted(load)
           <BaseIcon name="heart" :size="21" :filled="!!note.isLike" />
           <span>{{ note.liked || 0 }}</span>
         </button>
-        <button class="act" @click="toast(`共 ${note.comments || 0} 条评论`)">
+        <button class="act" @click="scrollToComments">
           <BaseIcon name="chat" :size="21" />
           <span>{{ note.comments || 0 }}</span>
         </button>
@@ -494,6 +568,92 @@ onMounted(load)
 .likes__count {
   font-size: 12px;
   color: var(--ink-3);
+}
+
+/* 评论 */
+.comments {
+  padding: 0 18px 16px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 56px;
+}
+.comments__title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 16px 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.comments__total {
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.comment {
+  display: flex;
+  gap: 10px;
+}
+.comment__main {
+  flex: 1;
+  min-width: 0;
+}
+.comment__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.comment__name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.comment__time {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.comment__text {
+  margin-top: 3px;
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--ink-2);
+  word-break: break-word;
+}
+.comments__empty {
+  padding: 6px 0 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.comment-box {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.comment-box__input {
+  flex: 1;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.comment-box__input::placeholder {
+  color: var(--ink-3);
+}
+.comment-box__send {
+  flex: none;
+  height: 38px;
+  padding: 0 18px;
+  font-size: 13px;
 }
 
 .footnote {

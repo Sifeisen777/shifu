@@ -43,12 +43,21 @@ public class MediaController {
 
     @GetMapping("/note/delete")
     public Result deleteNoteImg(@RequestParam("name") String filename) {
-        File file = new File(uploadDir, filename);
-        if (file.isDirectory()) {
-            return Result.fail("错误的文件名称");
+        try {
+            File root = new File(uploadDir).getCanonicalFile();
+            File file = new File(root, filename).getCanonicalFile();
+            // 名称来自请求参数，必须落在上传根目录内，避免 ../ 删到目录外的文件
+            if (!file.toPath().startsWith(root.toPath())) {
+                return Result.fail("错误的文件名称");
+            }
+            if (file.isDirectory()) {
+                return Result.fail("错误的文件名称");
+            }
+            FileUtil.del(file);
+            return Result.ok();
+        } catch (IOException e) {
+            throw new RuntimeException("文件删除失败", e);
         }
-        FileUtil.del(file);
-        return Result.ok();
     }
 
     private String createNewFileName(String originalFilename) {

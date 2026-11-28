@@ -191,7 +191,12 @@ public class NoteServiceImpl extends ServiceImpl<NoteMapper, Note> implements IN
                 .reverseRangeByScoreWithScores(key, 0, max, offset, 2);
         // 3.非空判断
         if (typedTuples == null || typedTuples.isEmpty()) {
-            return Result.ok();
+            // 保持返回结构一致：前端按 data.list 判断是否继续翻页，无需区分 null
+            ScrollResult empty = new ScrollResult();
+            empty.setList(Collections.emptyList());
+            empty.setOffset(0);
+            empty.setMinTime(max);
+            return Result.ok(empty);
         }
         // 4.解析数据：noteId、minTime（时间戳）、offset
         List<Long> ids = new ArrayList<>(typedTuples.size());
